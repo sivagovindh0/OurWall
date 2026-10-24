@@ -1,0 +1,106 @@
+---
+title: "Untitled"
+editor: visual
+---
+
+```{r}
+#| label: setup
+#| message: false # keeps rendered Quarto less noisy
+
+library(tidyverse)
+library(mosaic)
+library(skimr)
+library(ggformula)
+library(sf)
+library(rnaturalearth)
+
+C <- read_csv("data/panel-C.csv")
+```
+
+
+```{r}
+skim(C)
+inspect(C)
+glimpse(C)
+```
+```{r}
+Cmod <- C |> dplyr::mutate(country=as.factor(country), continent=as.factor(continent))
+glimpse(Cmod)
+
+```
+
+
+```{r}
+# QUESTION 1: does higher GDP mean more Life expectancy
+
+ggplot(Cmod, aes(x = gdpPercap, y = lifeExp)) +
+  geom_point(aes(color = continent), size = 3) +
+  geom_text(aes(label = country), size = 2.5, vjust = -0.5) +
+  labs(
+    title = "GDP per Capita vs Life Expectancy",
+    x = "GDP per Capita (log scale)",
+    y = "Life Expectancy",
+    color = "Continent"
+  ) +
+  theme_minimal()
+
+
+ggplot(Cmod, aes(x = gdpPercap, y = lifeExp)) +
+  geom_point(aes(color = continent), size = 3) +
+  geom_text(aes(label = country), size = 2.5, vjust = -0.5) +
+  scale_x_log10() +
+  labs(
+    title = "GDP per Capita vs Life Expectancy",
+    x = "GDP per Capita (log scale)",
+    y = "Life Expectancy",
+    color = "Continent"
+  ) +
+  theme_minimal()
+
+
+Cmod |>
+  gf_point(lifeExp ~ gdpPercap, color = ~ continent) |>
+  gf_labs(
+    x = "GDP per Capita (log scale)",
+    y = "Life Expectancy",
+    title = "GDP per Capita vs Life Expectancy"
+  ) +
+  scale_x_log10()
+
+
+```
+
+```{r}
+#QUESTION 2: 
+Cmod |> gf_bar(continent ~ pop, fill = ~ continent)
+##Cmod |> gf_bar(country ~ pop, fill = ~ continent, bins = 100)
+
+```
+
+```{r}
+world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
+#glimpse(world)
+```
+
+
+```{r}
+#world |> gf_sf(geometry = ~geometry)
+```
+
+```{r}
+worldSelect <- world |> dplyr::select(name, geometry)
+Cmod <- C |> left_join(worldSelect, by = c("country" = "name"))
+Cmodded <- Cmod |> dplyr::mutate(country=as.factor(country), continent=as.factor(continent))
+
+#glimpse(Cmodded)
+```
+
+```{r}
+Cmodded |> gf_sf(geometry = ~geometry, fill = ~ lifeExp, color = ~continent)
+#of all the countires I have life expectency is the worst in the african countires and afganistan
+Cmodded |> gf_sf(geometry = ~geometry, fill = ~ pop, color = ~continent)
+#highest population countires are china and india
+Cmodded |> gf_sf(geometry = ~geometry, fill = ~ gdpPercap, color = ~continent)
+#highest gdp is in north american countires europe and australia
+
+```

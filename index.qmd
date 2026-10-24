@@ -1,7 +1,7 @@
 ---
 title: "Group 2 — Risk factors"
 subtitle: "Studio wall"
-author: "Siva, Shaariq and Taniska"
+author: "Siva Govind H"
 format:
   html:
     toc: true
