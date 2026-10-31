@@ -1,0 +1,52 @@
+---
+title: "final panel"
+editor: visual
+---
+
+
+```{r}
+#| label: setup
+#| message: false # keeps rendered Quarto less noisy
+
+library(tidyverse)
+library(mosaic)
+library(skimr)
+library(ggformula)
+library(sf)
+library(vcd)
+library(supernova)
+
+
+data <- read_csv("data/introextro.csv")
+
+```
+
+
+
+```{r}
+
+dataM <- data %>% 
+  mutate(dept = as.factor(dept), typn = as.factor(typn))
+
+
+
+glimpse(dataM)
+view(dataM)
+skim(dataM)
+
+```
+
+```{r}
+dataM |> gf_bar(~dept, fill = ~typn, position = "dodge")
+dataM |> filter(typn != 0) |> gf_bar(~ dept, fill = ~typn, position = "fill")
+vcd::mosaic(~dept + typn, data = dataM) 
+
+dataM2 <- dataM |> filter(typn != 0) |> droplevels()
+mosaic::xchisq.test(dept ~ typn, data = dataM2)
+```
+```{r}
+aov(body_mass ~ species, data = penguins) |> supernova::supernova()
+aov(body_mass ~ species, data = penguins) |> supernova::pairwise(plot = TRUE)
+
+```
+

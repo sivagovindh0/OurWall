@@ -1276,6 +1276,348 @@ leaflet() |>
 
 Making these maps helped me see how location adds another layer to the story. The household maps show how the same locations can be understood through different lenses. The regional map connects Hinkley to the Los Angeles area and gives a sense of the distances involved in Erin's investigation.
 
+# Panel E
+
+#### Authors: Jay, Shaariq, Siva and Taniska
+
+```{r}
+#| label: panel-E-libraries
+
+library(tidyverse)
+library(mosaic)
+library(ggformula)
+library(skimr)
+library(vcd)
+library(supernova)
+library(readxl)
+library(janitor)
+```
+
+## Hunch 1 - Do girls have a higher monthly allowance than guys?
+
+We collected data from across the campus. The data consists of the monthly allowance of 30 guys and 30 girls. They are all college students and not working.
+
+```{r}
+allowance <- read_csv("data/allowance.csv")
+
+glimpse(allowance)
+skim(allowance)
+```
+
+Point at a row: Row 1 is respondent 1, a guy who gets an allowance of 5 (thousand) a month.
+
+`respondent` is just an ID number, `gender` is Qual (M / F) and `allowance` is Quant.
+
+The gender variable is a character variable and we need to mutate it into factor.
+
+```{r}
+allowance <- allowance %>%
+  mutate(gender = as.factor(gender))
+
+glimpse(allowance)
+skim(allowance)
+```
+
+We will use a histogram to take a look at the overall trend of allowance with girls and boys. We will then do a mosaic T.test to see if the difference carries any weight to it or if it's simply by chance.
+
+```{r}
+names(allowance)
+allowance |> gf_histogram(~ allowance, fill = ~gender) |>
+  gf_labs(title = "Most guys and girls get around 5k, with one girl way out at 40k")
+
+mosaic::t.test(allowance ~ gender, data = allowance)
+```
+
+According to the T.test, the p value is 0.49 which is much higher than 0.05. Which means that being a boy or a girl has no effect on monthly allowance, which is really nice because equality.
+
+Limit: 60 students from one campus, and allowance is self-reported. One girl gets 40k while everyone else gets 13k or less, and that one person pulls the girls' mean above the guys' (6.70 vs 5.75). Without her, the guys are slightly ahead (5.75 vs 5.55), but either way the difference isn't significant. We also don't know if allowance covers the same things (rent, food, fees) for everyone.
+
+## Hunch 2 - Some peasants make friends easier.
+
+The hunch was that MIT students are in more relationships than SMI students.
+
+This group collected data from MIT campus and SMI campus. I then had to change the nomenclature of the variables as it was named "Relationship Status" and "Department" which was confusing R. I changed them to "relationship_status" and "department".
+
+```{r}
+relationship <- read_csv("data/relationships.csv")
+
+glimpse(relationship)
+skim(relationship)
+```
+
+Point at a row: Row 1 is respondent 1, an SMI student who is not in a relationship.
+
+`respondants` is just an ID number, `department` is Qual (SMI / MIT) and `relationship_status` is Qual (Yes / No).
+
+The relationship_status and department variable is a character variable and we need to mutate it into factor.
+
+```{r}
+names(relationship)
+relationship <- relationship %>%
+  mutate(department = as.factor(department))
+relationship <- relationship %>%
+  mutate(relationship_status = as.factor(relationship_status))
+glimpse(relationship)
+```
+
+We will be doing a proportionality test by using a bar graph and using *position = "fill"* to make it proportional.
+
+```{r}
+relationship |> gf_bar(~ relationship_status, fill = ~department, position = "fill") |>
+  gf_labs(title = "SMI and MIT are in relationships at almost the same rate")
+```
+
+From the proportion bar graph we can see that both the departments are pretty fairly in the middle of both the yes and the no column. So we can conclude that it does not matter if you are in SMI or MIT, your odds of being in a relationship remain the same. (MIT: 13 of 30 in a relationship, SMI: 12 of 30.)
+
+Limit: 60 students, 30 from each campus. We only looked at a bar graph and didn't run a test, so "the same" is based on how it looks, not on a p value. "Relationship" is just yes / no, and people might not answer honestly about it.
+
+## Hunch 3 - there are more introverts in SMI than in MIT.
+
+This group had collected the personality types of people from both SMI and MIT. Each person is marked E (extrovert) or I (introvert) in the `social-orientation` column, which is all we need for this hunch.
+
+```{r}
+data <- read_csv("data/introextro.csv")
+
+glimpse(data)
+skim(data)
+```
+
+Point at a row: Row 1 is an SMI student whose MBTI type is ENTP, so they are marked E (extrovert).
+
+We only need the department and social-orientation variables, and convert them into factors. The column names have dashes in them, so they need backticks.
+
+```{r}
+dataM <- data %>%
+  mutate(department = as.factor(department),
+         mbti_type = as.factor(`mbti-type`),
+         social = as.factor(`social-orientation`))
+glimpse(dataM)
+```
+
+Now for graphs, I did two kinds of bar graphs and a mosaic graph. Then I did a chi-square test.
+
+```{r}
+dataM |> gf_bar(~ department, fill = ~ social, position = "dodge") |>
+  gf_labs(title = "SMI has twice as many introverts as extroverts")
+dataM |> gf_bar(~ department, fill = ~ social, position = "fill") |>
+  gf_labs(title = "MIT is close to half and half, SMI leans introvert")
+vcd::mosaic(~ department + social, data = dataM, shade = TRUE,
+            main = "The gap between SMI and MIT is not big enough to be shaded")
+
+mosaic::xchisq.test(department ~ social, data = dataM)
+```
+
+Limit: 60 students in total (31 SMI, 29 MIT). MBTI types are self-reported and often come from online quizzes. E/I is just one letter, so it doesn't tell us how strongly someone leans either way.
+
+IN THIS SAMPLE: From the bar graphs, MIT has slightly more extroverts than introverts (16 vs 13), while SMI has way more introverts than extroverts (21 vs 10). The difference between extroverts and introverts is small in MIT compared to the much larger difference in SMI.
+
+The chi-square test suggests that there is not enough statistical evidence to conclude that SMI students are more introverted than MIT students, since the p value is 0.13.
+
+## Hunch 4 - Design students believe in AI more than art students.
+
+This group collected and segregated the data based off whether the individual was enrolled in a design-centered program (CAC, IADP, BSSD) at SMI, vs an art-centered program (CAP, DM) - to see whether a certain group believes and trusts AI more than the other. There was another factor of gender in the data collected.
+
+```{r}
+ai <- read_csv("data/ai_belief.csv")
+
+glimpse(ai)
+skim(ai)
+```
+
+Point at a row: Row 1 is a boy in an art program who does not believe in AI.
+
+`count` is just an ID number, and `gender`, `program`, `AI_belief` are characters, which get mutated into factors.
+
+```{r}
+ai <- ai %>%
+  mutate(gender = as.factor(gender),
+         program = as.factor(program),
+         AI_belief = as.factor(AI_belief))
+
+glimpse(ai)
+```
+
+The first graph is a bar graph comparing art and design on the basis of a yes/no answer. Inference: design is about half yes (16 of 30), and art is a bit lower (12 of 30)
+
+```{r}
+ai |> gf_bar(~ program, fill = ~ AI_belief, position = "fill") |>
+  gf_labs(title = "Design is only a little more pro-AI than art")
+```
+
+The second graph is similar to the first one, only that it compares genders on the basis of a yes/no answer. Inference: boys are mostly yes (19 of 30) and girls are mostly no (21 of 30)
+
+```{r}
+ai |> gf_bar(~ gender, fill = ~ AI_belief, position = "fill") |>
+  gf_labs(title = "Boys mostly say yes to AI, girls mostly say no")
+```
+
+The mosaic charts will help in visualising the data with what should be the "ideal" data. Inference: the gender mosaic has a lopsided split, and the program one looks nearly even.
+
+```{r}
+vcd::mosaic(~ program + AI_belief, data = ai, shade = TRUE,
+            main = "Art and design split almost evenly")
+vcd::mosaic(~ gender + AI_belief, data = ai, shade = TRUE,
+            main = "Boys lean yes, girls lean no")
+```
+
+Looking at the p-values in the chi-sq tests: 1. Program - p ≈ 0.30, so not enough evidence. Art and design could easily look this different just by chance. 2. Gender - p ≈ 0.01, below 0.05, so the gap between boys and girls is unlikely to be chance in this sample.
+
+```{r}
+mosaic::xchisq.test(AI_belief ~ program, data = ai)
+mosaic::xchisq.test(AI_belief ~ gender, data = ai)
+```
+
+Limit: 60 students from only SMI, one college. Yes/no answer doesn't tell us how strongly a person feels about AI. (Likert plots could've been used if the data was collected in that format)
+
+IN THIS SAMPLE: From the bar graphs, design students say yes to AI a little more than art students (16 out of 30 vs 12 out of 30), but the gap is pretty small. But with gender: 19 out of 30 boys said yes, while only 9 out of 30 girls did.
+
+The chi-square test for program gives a p value of 0.30, which is way above 0.05, so we can't say design students believe in AI more than art students. Program doesn't seem to matter.
+
+The chi-square test for gender gives a p value of 0.01, which is below 0.05. So in this sample, boys are more likely to believe in AI than girls. We still can't say why, and with only 60 students from one campus, we'd need a bigger group before saying this is true everywhere.
+
+## Hunch 5 - Some people think tattoos make people look more attractive, while others think the opposite.
+
+This group asked students whether they think tattoos make people look more attractive (yes/no). They also recorded whether the person answering has tattoos themselves, to see if that changes their opinion. Gender was recorded too.
+
+```{r}
+tattoo <- read_csv("data/tattoo.csv")
+
+glimpse(tattoo)
+skim(tattoo)
+```
+
+Point at a row: Row 1 is a guy who has tattoos and thinks tattoos make people more attractive.
+
+`Respondents` is just an ID number, and `Gender`, `Has_tattoos?`, `Opinion` are characters, which get mutated into factors. `Has_tattoos?` has a question mark in its name, so it needs backticks in R.
+
+```{r}
+tattoo <- tattoo %>%
+  mutate(Gender = as.factor(Gender),
+         `Has_tattoos?` = as.factor(`Has_tattoos?`),
+         Opinion = as.factor(Opinion))
+
+glimpse(tattoo)
+```
+
+The first graph is a simple bar graph of everyone's answer to the main question: are tattoos attractive? Inference: yes wins by a huge margin - 41 vs 19.
+
+```{r}
+tattoo |> gf_bar(~ Opinion, fill = ~ Opinion) |>
+  gf_labs(title = "Two out of three people find tattoos attractive")
+```
+
+The second graph compares people with and without tattoos, as proportions. Inference: both groups look almost the same, about two-thirds yes (21 of 30 with tattoos, 20 of 30 without).
+
+```{r}
+tattoo |> gf_bar(~ `Has_tattoos?`, fill = ~ Opinion, position = "fill") |>
+  gf_labs(title = "Having tattoos yourself doesn't change the answer")
+```
+
+The third graph does the same for gender. Inference: almost no difference again (21 of 30 girls, 20 of 30 boys said yes).
+
+```{r}
+tattoo |> gf_bar(~ Gender, fill = ~ Opinion, position = "fill") |>
+  gf_labs(title = "Guys and girls answer almost the same")
+```
+
+The mosaic chart compares the real split with what we'd expect if having tattoos made no difference. Inference: the boxes line up almost perfectly, nothing is shaded.
+
+```{r}
+vcd::mosaic(~ `Has_tattoos?` + Opinion, data = tattoo, shade = TRUE,
+            main = "With or without tattoos, the split is the same")
+```
+
+First, a binomial test to check if opinion is really split, or if one side wins. Then chi-square tests to see if having tattoos (or gender) changes the answer. 1. Binomial (everyone) - p ≈ 0.006, below 0.05, so opinion isn't split down the middle: more people say yes. 2. Chi-square (has tattoos) - p ≈ 1, so having tattoos makes no difference to the answer. 3. Chi-square (gender) - p ≈ 1, no difference either.
+
+```{r}
+mosaic::binom.test(~ Opinion, data = tattoo, success = "yes")
+
+mosaic::xchisq.test(Opinion ~ `Has_tattoos?`, data = tattoo)
+mosaic::xchisq.test(Opinion ~ Gender, data = tattoo)
+```
+
+Limit: 60 students from one campus. "Attractive" is a yes/no answer, so we don't know how strongly people feel, or whether it depends on the tattoo (size, placement, style). "Has tattoos" is also just yes/no, with no info on how many.
+
+IN THIS SAMPLE: From the bar graphs, most people think tattoos make people look more attractive: 41 out of 60 said yes (about 68%). So it's not really a half-and-half debate; yes clearly wins.
+
+The binomial test gives a p value of 0.006, which is below 0.05, so the yes side winning is unlikely to be chance.
+
+Having tattoos yourself doesn't seem to matter at all: about two-thirds of both groups said yes, and the chi-square p value is about 1. Same with gender. So in this sample, whether or not you have tattoos, you're just as likely to find them attractive.
+
+## Hunch 6 - Friends vs Modern Family vs House
+
+This group asked students to rate three TV shows (Friends, House and Modern Family) out of 10. Not everyone has watched every show, so some ratings are missing.
+
+The scores were typed in as "7/10", "8/10" and so on, which Excel saved as dates (7th October, 8th October...). So we read the columns as dates and take the DAY of each date, which gives us back the score.
+
+```{r}
+#| label: read-tv-data
+#| warning: false
+
+library(readxl)
+library(janitor)
+
+hunch1 <- readxl::read_excel("data/tv_shows.xlsx",
+                             col_types = c("numeric", "date", "date", "date"),
+                             na = c("N/A", "`")) |>
+  janitor::clean_names()
+
+glimpse(hunch1)
+```
+
+Point at a row: Row 1 is student 1, who gave Friends a 7, didn't rate House, and gave Modern Family a 9.
+
+`students` is just an ID number. `friends`, `house` and `modern_family` come in as dates. `clean_names()` makes the column names lowercase with underscores, so "Modern Family" becomes `modern_family`.
+
+Next, we take the day from each date to get the score, then pivot longer so that all the shows are in one column, `show`, and all the scores in another, `scores`.
+
+```{r}
+#| label: tidy-tv-data
+
+hunch1_mod <- hunch1 |>
+  mutate(friends = lubridate::day(friends) |> as.numeric(),
+         house = lubridate::day(house) |> as.numeric(),
+         modern_family = lubridate::day(modern_family) |> as.numeric()) |>
+  pivot_longer(c(-students), names_to = "show", values_to = "scores") |>
+  filter(!is.na(scores)) |>
+  mutate(show = as.factor(show))
+
+glimpse(hunch1_mod)
+```
+
+Not everyone has watched every show (hi, it's me), so `filter(!is.na(scores))` kicks out the empty ratings and keeps only the ones people actually gave.
+
+The first graph is a boxplot of scores for each show. Inference: Modern Family sits highest (median 8), Friends is in the middle, and House is lowest, with the widest spread.
+
+```{r}
+hunch1_mod |> gf_boxplot(scores ~ show, fill = ~ show) |>
+  gf_labs(title = "Modern Family scores highest, House lowest")
+```
+
+The second graph is a histogram of scores, one panel per show. Inference: Modern Family's scores pile up at 8 to 10, while House's are spread all over (from 2 to 10).
+
+```{r}
+hunch1_mod |>
+  gf_histogram(~ scores, fill = ~ show, binwidth = 1) |>
+  gf_facet_wrap(~ show, ncol = 1) |>
+  gf_labs(title = "Modern Family piles up at 8 to 10, House is all over the place")
+```
+
+The scores are numbers and the shows are groups, so we can use an ANOVA. `supernova()` tells us whether the show makes a difference to the score, and `pairwise()` compares each pair of shows. 1. ANOVA - F ≈ 8.4, p ≈ 0.0004, PRE ≈ 0.11. The show explains about 11% of the variation in scores, and the difference is very unlikely to be chance. 2. Pairwise - Modern Family beats House (p \< 0.001) and Friends (p ≈ 0.03), but Friends and House can't be separated (p ≈ 0.19).
+
+```{r}
+favstats(scores ~ show, data = hunch1_mod)
+
+aov(formula = scores ~ show, data = hunch1_mod) |> supernova::supernova()
+aov(formula = scores ~ show, data = hunch1_mod) |> supernova::pairwise(plot = TRUE)
+```
+
+Limit: the same students rated more than one show, so the scores aren't fully independent (a normal ANOVA assumes they are). Far fewer people rated House (31, vs 50+ for the others), probably because fewer people have watched it. Also, a score out of 10 depends on the person: one person's 7 might be another person's 9.
+
+IN THIS SAMPLE: Modern Family is the favourite, with an average of about 8.1 out of 10, compared with 7.3 for Friends and 6.6 for House.
+
+The ANOVA gives a p value of 0.0004, which is way below 0.05, so the show really does make a difference to the score. The pairwise test shows that Modern Family is rated higher than both House and Friends, but the gap between Friends and House is too small to call.
+
 # Conclusion
 
 - **The spine so far:** Bodies carry risk differently by sex (A), class talks to *where people live* and *how much they smoke* more than to heart disease directly (B), and smoking keeps refusing to behave the way we predicted in both panels.
